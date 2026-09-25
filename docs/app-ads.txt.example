@@ -1,0 +1,4 @@
+# app-ads.txt goes at the ROOT of your developer website (https://yourdomain.com/app-ads.txt).
+# Copy the exact line from AdMob: Apps > (your app) > "Set up app-ads.txt". It looks like this:
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+# Then add your website URL to the app's Play Store listing (Store settings > Store listing contact details > Website).

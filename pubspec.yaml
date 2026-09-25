@@ -1,0 +1,60 @@
+name: water_sort
+
+description: Water Sort puzzle. Flutter shell (home, shop, PRO, themes, ads, IAP) around an HTML5 game.
+
+publish_to: "none"
+
+version: 1.0.1+2
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTML5 game / WebView
+  webview_flutter: ">=4.10.0 <5.0.0"
+  webview_flutter_android: ">=4.10.9 <5.0.0"
+  webview_flutter_web: "0.2.3+4"
+
+  # Ads
+  google_mobile_ads: ^9.1.0
+
+  # In-App Purchases
+  in_app_purchase: ">=3.2.0 <4.0.0"
+  in_app_purchase_android: ">=0.5.0 <1.0.0"
+
+  # Storage
+  shared_preferences: ">=2.3.0 <3.0.0"
+
+  # External URLs
+  url_launcher: ">=6.3.0 <7.0.0"
+
+  # App information
+  package_info_plus: ">=8.0.0 <12.0.0"
+
+  # In-app review
+  in_app_review: ">=2.0.9 <3.0.0"
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ">=5.0.0 <8.0.0"
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/web/index.html
+
+  fonts:
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Fredoka-Bold.ttf
+          weight: 700
