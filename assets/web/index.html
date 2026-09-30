@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Water Sort Prototype</title>
+<title>Water Sort</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{margin:0;height:100%;background:#05070f;font-family:Fredoka,'Trebuchet MS',system-ui,sans-serif;color:#eaf6ff;overflow:hidden}
@@ -196,7 +196,7 @@ const HOSTCH = window.FlutterHost || null;
 const IN_APP = !!HOSTCH;
 const DEFAULT_SKIN = {glass:'#5bb8ea', glow:'#a8e8ff', tint:'rgba(140,170,255,.08)', rim:'rgba(120,200,255,.55)', cork:'#c98b4b', corkDark:'#a56a30'};
 const DEFAULT_BG = {c1:'#1b2350', c2:'#0c1024', c3:'#080a18', bub:'rgba(120,190,255,.07)'};
-const DEFAULT_PRICES = {hint:30, undo:40, bottle:60, time:50, skip:150};
+const DEFAULT_PRICES = {hint:100, undo:40, bottle:100, time:50, skip:150};
 const TUNE = {EXTRA_TIME:30, EXTRA_UNDOS:3};
 
 const Host = {
@@ -271,14 +271,33 @@ let muted = false, SKIN = Object.assign({}, DEFAULT_SKIN), BUB = DEFAULT_BG.bub;
 function applyBg(bg){
   BUB = bg.bub || BUB;
   const g = document.getElementById('game');
-  if (g) g.style.background = 'radial-gradient(90% 60% at 50% 35%,' + bg.c1 + ' 0%,' + bg.c2 + ' 62%,' + bg.c3 + ' 100%)';
+  if (!g) return;
+
+  if (bg.assetPath){
+    const safePath = String(bg.assetPath)
+      .replace(/\\/g, '/')
+      .replace(/'/g, "\\'");
+    g.style.background =
+      'linear-gradient(rgba(5,7,16,.22),rgba(5,7,16,.48)), url(\'' +
+      safePath +
+      '\') center / cover no-repeat';
+    g.style.backgroundColor = bg.c3 || '#080a18';
+    g.style.backgroundAttachment = 'scroll';
+  } else {
+    g.style.background =
+      'radial-gradient(90% 60% at 50% 35%,' +
+      (bg.c1 || '#1b2350') + ' 0%,' +
+      (bg.c2 || '#0c1024') + ' 62%,' +
+      (bg.c3 || '#080a18') + ' 100%)';
+    g.style.backgroundAttachment = 'scroll';
+  }
 }
 
 /* =====================================================================
    STATE
    ===================================================================== */
 let CAP = 4;
-const PAL = ['#ff5c7a','#ff9a3d','#ffd23f','#9be564','#2ecc8f','#22c1d6','#4d7cff','#9b5cf6','#f472d0','#b5651d','#e8ecf5','#7a1f5c','#2b3a8f','#c7e93a','#c21e3a'];
+const PAL = ['#ff5c7a','#ff9a3d','#ffd23f','#9be564','#2ecc8f','#22c1d6','#4d7cff','#9b5cf6','#f472d0','#b5651d','#e8ecf5','#7a1f5c'];
 const UNK = '#2a2a48';
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -304,7 +323,10 @@ function closeM(id){ const e = $(id); if (e.classList.contains('hide')) return; 
 // Boosts per level. PRO: unlimited undos, 3 extra bottles, 1 free hint.
 function resetBoosts(){
   const P = params(S.level);
-  undos = S.pro ? 999 : P.undos; adds = S.pro ? 3 : 1; freeHints = S.pro ? 1 : 0; undoUsed = 0;
+  undos = S.pro ? 999 : P.undos;
+  adds = 2;       // Maximum 2 extra bottles per level.
+  freeHints = 2;  // 2 paid hints per level; 3rd+ hint requires a rewarded ad.
+  undoUsed = 0;
 }
 function startLevel(){
   const P = params(S.level);
@@ -312,7 +334,7 @@ function startLevel(){
   won=false; lost=false; winT=-1; busy=false; anim=null; pose=null; sel=-1; history=[]; conf=[]; fx=[]; combo=0;
   resetBoosts();
   timed = P.timed; timeTotal = timeLeft = P.time; lastSec = -1;
-  bottles = genLevel(S.level, P.nc, P.empties, P.cap, P.hidden);
+  bottles = genLevel(S.level, P.nc, P.empties, P.cap);
   hid = bottles.map(b => hideMode ? Math.max(b.length-1, 0) : 0);
   resetVis();
   appear = appear.map((_, i) => -i*0.17);
@@ -344,10 +366,17 @@ function ui(){
   if (shownCoins >= 0 && shownCoins !== S.coins) retrigger($('coins'), 'pop');
   shownCoins = S.coins;
   const bU = $('uN'), bH = $('hN'), bA = $('aN'), hc = S.prices.hint;
-  bU.textContent = S.pro ? '\u221E' : (undos > 0 ? undos : '+'); bU.className = (S.pro || undos > 0) ? '' : 'ad';
-  if (freeHints > 0){ bH.textContent = 'FREE'; bH.className = 'free'; }
-  else { bH.textContent = hc; bH.className = S.coins >= hc ? '' : 'ad'; }
-  bA.textContent = adds > 0 ? adds : '+'; bA.className = adds > 0 ? '' : 'ad';
+  bU.textContent = S.pro ? '\u221E' : (undos > 0 ? undos : '+');
+  bU.className = (S.pro || undos > 0) ? '' : 'ad';
+
+  // Hint: maximum 2 coin-paid uses per level, 100 coins per use.
+  // After those 2 are used, the next hint is rewarded-ad only.
+  bH.textContent = freeHints > 0 ? freeHints : 'AD';
+  bH.className = freeHints > 0 ? (S.coins >= hc ? '' : 'ad') : 'ad';
+
+  // Extra bottle: maximum 2 per level, 100 coins per use.
+  bA.textContent = adds > 0 ? adds : '0';
+  bA.className = adds > 0 && S.coins >= S.prices.bottle ? '' : 'ad';
   $('bUndo').disabled = !history.length;
   $('noads').style.display = (S.noAds || S.pro) ? 'none' : '';
   $('mSound').textContent = 'Sound: ' + (muted ? 'off' : 'on');
@@ -394,15 +423,7 @@ function findHint(){
   }
   return best;
 }
-// Reveals a bottle's mystery colors once it becomes empty or fully sorted.
-// IMPORTANT: pass the specific bottle indices that were just touched by a move
-// (e.g. [a, b] after a pour). A bottle nobody poured into or out of must never
-// change - passing no argument is reserved for the one-time check right after
-// a level is generated (see startLevel), never during play.
-function normalize(indices){
-  const list = indices || bottles.map((_, i) => i);
-  for (const i of list){ const b = bottles[i]; if (!b.length || isDone(b)) hid[i] = 0; }
-}
+function normalize(){ bottles.forEach((b,i) => { if (!b.length || isDone(b)) hid[i] = 0; }); }
 const isWin = () => bottles.every(b => !b.length || isDone(b));
 
 function pour(a, b, n){
@@ -419,7 +440,7 @@ function finishPour(){
   if (L > 0 && hid[a] >= L){ hid[a] = L-1; revealed = true; }
   if (L === 0) hid[a] = 0;
   wob[a] = 2.5; wob[b] = 4;
-  anim = null; pose = null; busy = false; normalize([a, b]);
+  anim = null; pose = null; busy = false; normalize();
   if (revealed){
     sfx('reveal');
     addFx({t:'ring', x:pos[a].x, y:pos[a].y + LB - (L-0.5)*U, r0:4, r1:bw*0.7, c:'#fff', max:450});
@@ -488,29 +509,125 @@ function undo(){
   if (!S.pro){ undos--; undoUsed++; }
   restore(history.pop()); sel = -1; ui(); sfx('undo');
 }
-function addBottle(){
+function grantExtraBottle(){
+  if (busy || won || lost || adds > 0) return;
+  adds++;
+  history.push(snap());
+  bottles.push([]);
+  hid.push(0);
+  lift.push(0);
+  wob.push(0);
+  shake.push(0);
+  corkT.push(1);
+  done.push(false);
+  appear.push(0);
+  layout();
+  ui();
+  retrigger($('aN'), 'bump');
+  sfx('add');
+}
+
+async function addBottle(){
   if (busy || won || lost) return;
-  if (adds <= 0){
-    askBoost({title:'Need more space?', text:'Add one more empty bottle.', cost:S.prices.bottle, placement:'bottle',
-      onGrant:() => { adds++; ui(); addBottle(); }});
+
+  // First 2 extra bottles: 100 coins each.
+  if (adds > 0){
+    const cost = S.prices.bottle;
+    if (S.coins < cost){
+      toast('You need ' + cost + ' coins for an extra bottle.');
+      Host.post('nav', {to:'shop'});
+      return;
+    }
+
+    if (!await spendCoins(cost, 'bottle')){
+      toast('Not enough coins');
+      return;
+    }
+
+    adds--;
+    history.push(snap());
+    bottles.push([]);
+    hid.push(0);
+    lift.push(0);
+    wob.push(0);
+    shake.push(0);
+    corkT.push(1);
+    done.push(false);
+    appear.push(0);
+
+    layout();
+    ui();
+    retrigger($('aN'), 'bump');
+    sfx('add');
     return;
   }
-  adds--; history.push(snap());
-  bottles.push([]); hid.push(0); lift.push(0); wob.push(0); shake.push(0); corkT.push(1); done.push(false); appear.push(0);
-  layout(); ui(); retrigger($('aN'), 'bump'); sfx('add');
+
+  // 3rd+ extra bottle: rewarded ad only.
+  askBoost({
+    title:'Need one more bottle?',
+    text:'Watch a short video to add another bottle.',
+    cost:0,
+    placement:'bottle',
+    onGrant:grantExtraBottle
+  });
 }
-function useHint(){
+function grantExtraHint(){
   if (busy || won || lost) return;
-  const go = () => {
-    const h = findHint();
-    if (!h){ toast('No moves left. Try undo or add a bottle.'); return; }
-    hint = {a:h[0], b:h[1], t:0}; sel = -1; sfx('hint');
-    Host.post('analytics', {name:'hint_used', params:{level:S.level}});
-  };
-  const cost = S.prices.hint;
-  if (freeHints > 0){ freeHints--; ui(); go(); }
-  else if (S.coins >= cost){ spendCoins(cost, 'hint').then(ok => { if (ok) go(); else toast('Not enough coins'); }); }
-  else askBoost({title:'Need a hint?', text:'A hint costs ' + cost + ' coins.', cost, placement:'hint', onGrant:go});
+
+  const h = findHint();
+  if (!h){
+    toast('No moves left. Try undo or add a bottle.');
+    return;
+  }
+
+  // Rewarded-video hint is an extra use, so it does not consume the 2 paid uses.
+  hint = {a:h[0], b:h[1], t:0};
+  sel = -1;
+  ui();
+  sfx('hint');
+  Host.post('analytics', {name:'hint_used', params:{level:S.level, method:'rewarded'}});
+}
+
+async function useHint(){
+  if (busy || won || lost) return;
+
+  const h = findHint();
+  if (!h){
+    toast('No moves left. Try undo or add a bottle.');
+    return;
+  }
+
+  // First 2 hints: 100 coins each.
+  if (freeHints > 0){
+    const cost = S.prices.hint;
+    if (S.coins < cost){
+      toast('You need ' + cost + ' coins for a hint.');
+      Host.post('nav', {to:'shop'});
+      return;
+    }
+
+    if (!await spendCoins(cost, 'hint')){
+      toast('Not enough coins');
+      return;
+    }
+
+    freeHints--;
+    hint = {a:h[0], b:h[1], t:0};
+    sel = -1;
+    ui();
+    sfx('hint');
+    Host.post('analytics', {name:'hint_used', params:{level:S.level, method:'coins'}});
+    return;
+  }
+
+  // 3rd+ hint: rewarded ad only. No coin purchase.
+  askBoost({
+    title:'Need another hint?',
+    text:'Watch a short video to get another hint.',
+    cost:0,
+    placement:'hint',
+    onGrant:grantExtraHint
+  });
 }
 function moreTime(){
   askBoost({title:'More time?', text:'Get +' + TUNE.EXTRA_TIME + ' seconds.', cost:S.prices.time, placement:'time', onGrant:() => {
@@ -622,7 +739,7 @@ function applyState(st, first){
   if (st.muted !== undefined) muted = !!st.muted;
   if (st.skin) SKIN = Object.assign({}, DEFAULT_SKIN, st.skin);
   if (st.bg) applyBg(st.bg);
-  if (S.pro && !wasPro && !first){ undos = 999; adds = Math.max(adds, 3); freeHints = Math.max(freeHints, 1); toast('PRO unlocked. Enjoy!'); sfx('buy'); }
+  if (S.pro && !wasPro && !first){ undos = 999; toast('PRO unlocked. Enjoy!'); sfx('buy'); }
   ui();
 }
 Host.on('state', st => applyState(st, false));
@@ -647,8 +764,8 @@ Host.on('back', () => {                                                     // A
 function params(lv){
   const hidden = lv >= 3 && (lv < 30 ? lv % 3 === 0 : lv % 2 === 0);
   const timed = lv >= 40 && lv % 5 === 0;
-  const cap = lv >= 450 ? 8 : lv >= 250 ? 7 : lv >= 120 ? 6 : lv >= 50 ? 5 : 4;
-  const nc = Math.min(3 + Math.ceil(lv/2), 15);
+  const cap = lv >= 120 ? 6 : lv >= 50 ? 5 : 4;
+  const nc = Math.min(3 + Math.ceil(lv/2), 12);
   const empties = (lv >= 25 && (!hidden || lv >= 80)) ? 1 : 2;
   const time = timed ? Math.round((40 + nc*12 + cap*6) * Math.max(0.7, 1 - (lv-40)*0.003)) : 0;
   return {nc, cap, hidden, timed, time, empties, undos: Math.max(2, 5 - Math.floor(lv/20))};
@@ -707,14 +824,11 @@ function solvable(b0, cap, limit){
   }
   return dfs(b0.map(x => x.slice()));
 }
-// hideOk: whether an already-fully-sorted bottle is acceptable in the result.
-// It never is for mystery levels - a bottle nobody has touched yet must not
-// already show its true color, or the "?" system has nothing left to hide.
-function genWalk(lv, nc, empties, cap, hideOk){
+function genWalk(lv, nc, empties, cap){
   const R = seeded(lv * 7919 + 12345);
   const target = Math.min(0.35 + lv*0.008, 0.78) * nc * (cap-1);
   const tries = lv < 10 ? 25 : 40;
-  let best = null, bestScore = -1e9, bestSafe = null, bestSafeScore = -1e9;
+  let best = null, bestScore = -1e9;
   for (let attempt = 0; attempt < tries; attempt++){
     const b = [];
     for (let i = 0; i < nc; i++) b.push(Array(cap).fill(i));
@@ -740,20 +854,13 @@ function genWalk(lv, nc, empties, cap, hideOk){
     let mix = 0; for (const a of b) for (let k = 1; k < a.length; k++) if (a[k] !== a[k-1]) mix++;
     const score = mix - done*3;
     if (score > bestScore){ best = b; bestScore = score; }
-    if (done === 0 && score > bestSafeScore){ bestSafe = b; bestSafeScore = score; }
-    const goodEnough = hideOk ? (done === 0 || (lv < 10 && done <= Math.floor(nc/4))) : done === 0;
-    if (mix >= target && goodEnough) return b;
+    if (mix >= target && (done === 0 || (lv < 10 && done <= Math.floor(nc/4)))) return b;
   }
-  // Out of attempts: prefer a candidate with zero pre-solved bottles over the
-  // highest-mix one, whenever mystery mode cannot allow a pre-solved bottle.
-  if (!hideOk) return bestSafe || best;
   return best;
 }
 // Level 1-11 and every 1-empty level: reverse walk (gentle curve / guaranteed solvable).
 // Level 12+ with 2 empties: fully random deals, kept only if the solver proves them solvable.
-// hideMode levels never return a bottle that is already fully sorted, so the
-// mystery "?" system always has something real left to hide on every bottle.
-function genLevel(lv, nc, empties, cap, hideMode){
+function genLevel(lv, nc, empties, cap){
   if (lv >= 12 && empties >= 2){
     const R = seeded(lv * 104729 + 777);
     for (let t = 0; t < 6; t++){
@@ -762,7 +869,7 @@ function genLevel(lv, nc, empties, cap, hideMode){
       if (solvable(b, cap, 30000)) return b;
     }
   }
-  return genWalk(lv, nc, empties, cap, !hideMode);
+  return genWalk(lv, nc, empties, cap);
 }
 
 /* =====================================================================

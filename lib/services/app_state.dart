@@ -7,7 +7,7 @@ import 'package:water_sort/models/themes.dart';
 import 'package:water_sort/services/storage.dart';
 import 'package:water_sort/services/telemetry.dart';
 
-enum BuyThemeResult { ok, notEnoughCoins, proRequired, alreadyOwned, unknown }
+enum BuyThemeResult { ok, notEnoughCoins, proRequired, levelRequired, alreadyOwned, unknown }
 
 class DailyStatus {
   const DailyStatus({required this.canClaim, required this.streak, required this.reward});
@@ -66,6 +66,7 @@ class AppState extends ChangeNotifier {
     final t = ThemeCatalog.byId(themeId);
     if (t == null) return false;
     if (t.proOnly) return _data.pro;
+    if (t.unlockLevel != null) return _data.level >= t.unlockLevel! || _data.owned.contains(themeId);
     return t.price == 0 || _data.owned.contains(themeId);
   }
 
@@ -129,6 +130,7 @@ class AppState extends ChangeNotifier {
     if (t == null) return BuyThemeResult.unknown;
     if (owns(id)) return BuyThemeResult.alreadyOwned;
     if (t.proOnly) return BuyThemeResult.proRequired;
+    if (t.unlockLevel != null) return BuyThemeResult.levelRequired;
     if (!spendCoins(t.price, reason: 'theme:$id')) return BuyThemeResult.notEnoughCoins;
     _data.owned.add(id);
     equip(id);

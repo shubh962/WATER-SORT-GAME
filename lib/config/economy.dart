@@ -1,18 +1,24 @@
 /// One place for every coin price and reward, so balancing is easy.
 /// The game (HTML) receives [prices] at boot, so it never hard-codes them.
 class Economy {
-  // ---- coin SINKS (what coins are for) ----
-  static const int hint = 30;
+  // ---- coin SINKS ----
+  static const int hint = 100;
   static const int undoPack = 40; // +3 undos
-  static const int extraBottle = 60;
+  static const int extraBottle = 100;
   static const int extraTime = 50; // +30 s on timed levels
   static const int skipLevel = 150;
-  // Themes have their own prices in themes.dart (400 to 1500 coins).
 
   // ---- coin SOURCES ----
-  static const int freeVideoCoins = 200; // rewarded video in the shop
-  static const List<int> dailyRewards = <int>[50, 75, 100, 150, 200, 300, 500];
-  // Level wins pay 40 to 120+ coins (computed in the game), doubled for PRO.
+  static const int freeVideoCoins = 200;
+  static const List<int> dailyRewards = <int>[
+    50,
+    75,
+    100,
+    150,
+    200,
+    300,
+    500,
+  ];
 
   static Map<String, int> get prices => <String, int>{
         'hint': hint,
@@ -22,13 +28,12 @@ class Economy {
         'skip': skipLevel,
       };
 
-  /// Text for the "What are coins for?" card.
   static const List<(String, String)> uses = <(String, String)>[
-    ('Hints', '$hint coins'),
+    ('Hints', '$hint coins each (max 2 per level)'),
+    ('Extra bottle', '$extraBottle coins each (max 2 per level)'),
     ('+3 undos', '$undoPack coins'),
-    ('Extra bottle', '$extraBottle coins'),
     ('+30 seconds (timed levels)', '$extraTime coins'),
     ('Skip a level', '$skipLevel coins'),
-    ('Bottle styles and backgrounds', '400 to 1,500 coins'),
+    ('Bottle shapes and backgrounds', '300 to 8,000 coins + level gifts + PRO'),
   ];
 }

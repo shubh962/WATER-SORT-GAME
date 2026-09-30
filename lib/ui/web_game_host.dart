@@ -7,6 +7,10 @@ const String _waterSortViewType = 'water-sort-html-game';
 
 bool _registered = false;
 
+/// Registers the HTML5 Water Sort iframe for Flutter Web.
+///
+/// This file is only used by the Web build. Android/iOS continue using the
+/// native WebView host.
 void registerWebGameView() {
   if (_registered) return;
 

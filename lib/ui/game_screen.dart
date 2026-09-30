@@ -34,7 +34,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) return; // WebView, ads and billing are Android-only (see build())
     WidgetsBinding.instance.addObserver(this);
     _controller = WebViewController();
     _bridge = GameBridge(
@@ -48,10 +47,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         if (mounted) setState(() => _ready = true);
       },
     );
-    _configureWebView();
-    _bridge.attach();
     Services.ads.adShowing.addListener(_onAdShowing);
-    unawaited(_load());
+
+    // webview_flutter is Android/iOS functionality. On Flutter Web,
+    // do not call WebViewController platform methods because they are
+    // not implemented by the web platform.
+    if (!kIsWeb) {
+      _configureWebView();
+      _bridge.attach();
+      unawaited(_load());
+    }
   }
 
   void _configureWebView() {
@@ -135,18 +140,61 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    if (!kIsWeb) {
-      _readyTimeout?.cancel();
-      Services.ads.adShowing.removeListener(_onAdShowing);
-      _bridge.dispose();
-      WidgetsBinding.instance.removeObserver(this);
-    }
+    _readyTimeout?.cancel();
+    Services.ads.adShowing.removeListener(_onAdShowing);
+    _bridge.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) return const _WebNotSupported();
+    // The actual game is intentionally Android-only. Flutter Web is used
+    // only for development/preview, so show a friendly screen instead of
+    // invoking unsupported WebView APIs in Chrome.
+    if (kIsWeb) {
+      return Scaffold(
+        backgroundColor: AppColors.bgMid,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(
+                    Icons.phone_android_rounded,
+                    size: 72,
+                    color: AppColors.teal,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Android Version Required',
+                    style: kTitle,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Water Sort is designed to run as an Android game. '
+                    'Build and run the Android version to play the game.',
+                    style: kDim,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  GameButton(
+                    label: 'Back to Home',
+                    style: GameButtonStyle.purple,
+                    onPressed: () => Navigator.of(context).pop(),
+                    expand: false,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return PopScope(
       canPop: false, // the Android back button goes to the game first (close popup / pause menu)
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -167,49 +215,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   children: <Widget>[
                     WebViewWidget(controller: _controller),
                     if (!_ready && !_failed) const _Loading(),
-                    if (_failed) _LoadError(onRetry: _load, onHome: () => Navigator.of(context).pop()),
+                    if (_failed)
+                      _LoadError(
+                        onRetry: _load,
+                        onHome: () => Navigator.of(context).pop(),
+                      ),
                   ],
                 ),
               ),
               const BannerAdView(),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shown when the app is run in a browser (flutter run -d chrome).
-/// The game needs Android's WebView, AdMob and Google Play Billing.
-class _WebNotSupported extends StatelessWidget {
-  const _WebNotSupported();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgMid,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Icon(Icons.phone_android_rounded, size: 56, color: AppColors.teal),
-                const SizedBox(height: 12),
-                const Text('Run this on an Android phone', style: kTitle, textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                const Text(
-                  'The game, ads and purchases only work on Android, not in a browser.\n\n'
-                  'To preview only the game in Chrome, open assets/web/index.html directly.',
-                  style: kDim,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                GameButton(label: 'Back', expand: false, onPressed: () => Navigator.of(context).maybePop()),
-              ],
-            ),
           ),
         ),
       ),

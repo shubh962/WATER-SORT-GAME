@@ -36,7 +36,13 @@ class ScreenScaffold extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white.withValues(alpha: 0.22),
-                        boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x59000000), offset: Offset(0, 3), blurRadius: 6)],
+                        boxShadow: const <BoxShadow>[
+                          BoxShadow(
+                            color: Color(0x59000000),
+                            offset: Offset(0, 3),
+                            blurRadius: 6,
+                          ),
+                        ],
                       ),
                       child: IconButton(
                         style: IconButton.styleFrom(
@@ -45,14 +51,25 @@ class ScreenScaffold extends StatelessWidget {
                         ),
                         tooltip: 'Back',
                         onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_back_rounded, size: 26, color: AppColors.text),
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          size: 26,
+                          color: AppColors.text,
+                        ),
                       ),
                     ),
-                    Expanded(child: Center(child: Text(title, style: kTitle))),
+                    Expanded(
+                      child: Center(
+                        child: Text(title, style: kTitle),
+                      ),
+                    ),
                     if (showCoins)
                       ListenableBuilder(
                         listenable: Services.state,
-                        builder: (BuildContext context, Widget? _) => CoinPill(coins: Services.state.coins, onTap: onCoinsTap),
+                        builder: (BuildContext context, Widget? _) => CoinPill(
+                          coins: Services.state.coins,
+                          onTap: onCoinsTap,
+                        ),
                       )
                     else
                       const SizedBox(width: 48),
@@ -60,7 +77,7 @@ class ScreenScaffold extends StatelessWidget {
                 ),
               ),
               Expanded(child: child),
-              if (bottom != null) bottom!,
+              if (bottom case final bottomWidget?) bottomWidget,
             ],
           ),
         ),
