@@ -77,18 +77,15 @@ android {
             // Use the real release/upload keystore.
             signingConfig = signingConfigs.getByName("release")
 
-            // -----------------------------------------------------------------
-            // CRASH FIX / DIAGNOSTIC
-            //
-            // The production build is crashing during AndroidX Startup ->
-            // WorkManager -> WorkDatabase initialization.
-            //
-            // Keep Android R8/minification and resource shrinking OFF while
-            // validating the production build.
-            // -----------------------------------------------------------------
-
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Smaller app: R8 removes unused code, shrinkResources removes unused resources.
+            // The WorkManager/Room keep rules (the old startup crash) live in proguard-rules.pro.
+            // If a release test still crashes, set both flags back to false.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

@@ -4,7 +4,7 @@ description: Water Sort puzzle. Flutter shell (home, shop, PRO, themes, ads, IAP
 
 publish_to: "none"
 
-version: 1.0.4+4
+version: 1.0.5+5
 
 environment:
   sdk: ">=3.12.0 <4.0.0"
@@ -23,7 +23,7 @@ dependencies:
   webview_flutter_web: "0.2.3+4"
 
   # Ads
-  google_mobile_ads: ^9.1.0
+  google_mobile_ads: ^8.0.0
 
   # In-App Purchases
   in_app_purchase: ">=3.2.0 <4.0.0"
